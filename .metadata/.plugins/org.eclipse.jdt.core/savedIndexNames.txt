@@ -1,0 +1,3 @@
+INDEX VERSION 1.131+C:\Users\4ever\OneDrive\Documents\elearning\semestr4\ai\labs\AlgorytmGeneryczny\.metadata\.plugins\org.eclipse.jdt.core
+3363926391.index
+3519760894.index
