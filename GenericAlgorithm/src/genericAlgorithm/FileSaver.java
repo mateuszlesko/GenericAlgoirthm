@@ -5,8 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class FileSaver {
-	
-	private String fileName;
+	String fileName;
 	public FileSaver(String fileName) {
 		this.fileName = fileName;
 	}

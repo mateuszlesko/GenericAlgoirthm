@@ -1,0 +1,208 @@
+package genericAlgorithm;
+
+public class GenericAlgorithm {
+	public class Algorytm {
+
+	    public static double Ai = -4.5;
+	    public static double Bi = 4.5;
+	    static double precision = 1000;
+	    public int genCount = 2;
+	    public double mutationPropability = 0.04;
+	    public double crossingPropability = 0.6;
+	    
+	    public int wielkoscPopulacji;
+
+	    public int generacja;
+
+	    public double najlepszeRozwiazanie;
+	    public int wskaznikEwaulacji = 0;
+	    
+	    Invidual[] population;
+	    
+	    Invidual najlepszy = null;
+
+	    int ewaulacje;
+	    
+	    int MI = 1;
+	    
+	    public Algorytm(int _n, int _populationLength, double _MutacjaPropability, double _krzyzowaniePropability) {
+	        mutationPropability = _MutacjaPropability;
+	        crossingPropability = _krzyzowaniePropability;
+	        wielkoscPopulacji = _populationLength;
+	        genCount = _n;
+	        //krok 1 tworzymy populacje bazowa
+	        population = stworzPopulacje();
+	        MI = Invidual.Mi(Ai, Bi, precision);
+	    }
+
+	    
+	    private Invidual[] stworzPopulacje(){
+	    	
+	    	Invidual [] _population = new Invidual[wielkoscPopulacji];
+	    	for(int i = 0; i < wielkoscPopulacji; i++) {
+	    		_population[i] = new Invidual(Ai,Bi,genCount,precision);
+	    		
+	    	}
+	    	return _population;
+	    }
+	    
+	    
+	    private Invidual znajdzNajlepszegoObecnie(Invidual [] population) {
+	   
+	    	Invidual najlepszy = population[0];
+	    	for(int i = 1; i < wielkoscPopulacji; i++) {
+	    		if(najlepszy.compareTo(population[i]) == 1) {
+	    			najlepszy = population[i];
+	    		}
+	    	}
+	    	return najlepszy;
+	    }
+	    
+	    private void zmienPopulacje(Invidual[] nowa) {
+	    	for(int i = 1; i < wielkoscPopulacji; i++) {
+	    		population[i] = nowa[i];
+	    	}
+	    }
+	    
+	    public Invidual[] run(double env) {
+	        wskaznikEwaulacji = 1;
+	        String pomiar = "";
+	        
+	        while (wskaznikEwaulacji <= env) {
+	        	double wartosciFunkcji [] = new double[wielkoscPopulacji];
+	        	//System.out.println("=====Ewaulacja=========");
+	        	for(int i = 0; i < wielkoscPopulacji; i++) {
+	        		population[i].functionValue = population[i].obliczfunctionValue();
+	        		wartosciFunkcji[i] = population[i].functionValue;
+	        		wskaznikEwaulacji++;
+	        	}
+	        	pomiar = (wskaznikEwaulacji)+";"+sredniaWartoscPopulacji(wartosciFunkcji);
+	        	pomiar = pomiar.replace('.',',');
+	    		zapiszRozwiazania(pomiar,wielkoscPopulacji);
+	    	
+	        	
+	        	//selekcja najlepszych rozwiazan do nowej populacji
+	        	Turniej turniej = new Turniej(population);
+	        	najlepszy = znajdzNajlepszegoObecnie(population);
+	        	najlepszeRozwiazanie = najlepszy.functionValue;
+	        	
+	        	population = turniej.calyTurniej();
+	        	population[0] = najlepszy;
+	        	
+	        	//dokonanie mutacji:
+	        	population = mutujPopulacje(population);
+//	        	
+	        	//System.out.println("=====MUTACJA=========");
+	        	for(int i = 0; i < wielkoscPopulacji; i++) {
+	        		population[i].functionValue = population[i].obliczfunctionValue();
+	        		//System.out.println(population[i].functionValue);
+	        	}
+	        	
+	        	//dokonanie krzyzowania:
+	        	
+	        	if(genCount <= 20) {
+	        		population = krzyzuj2Punktowo(population);
+	        	}
+	        	else {
+	        		population = krzyzuj8Punktowo(population);
+	        		
+	        	}
+	        	//System.out.println("=====KRZYZOWANIE=========");
+	        	for(int i = 0; i < wielkoscPopulacji; i++) {
+	        		population[i].functionValue = population[i].obliczfunctionValue();
+	        		//System.out.println(population[i].functionValue);
+	        	}
+	        	
+	        	pomiar = (wskaznikEwaulacji)+";"+najlepszeRozwiazanie;
+	          	pomiar = pomiar.replace('.',',');
+	          	zapiszNajlepszeLokalneRozwiazania(pomiar, wielkoscPopulacji);
+	          	
+	          	if(najlepszeRozwiazanie <= Main.globalneNajlepsze) {
+	          		Main.globalneNajlepsze = najlepszeRozwiazanie;
+	          	}
+	          	
+	          	pomiar = wskaznikEwaulacji+";" + Main.globalneNajlepsze;
+	          	pomiar = pomiar.replace(".",",");
+	        	zapiszGlobalnieNajlepszego(pomiar);
+	          	
+	        }
+	      
+	        return population;
+	    }
+	    
+	    private Invidual[] krzyzuj2Punktowo(Invidual[] population) {
+	    	Krzyzowanie2Punkt krzyzowanie2Punkt = new Krzyzowanie2Punkt(genCount*MI);
+	    	for(int i = 0; i < population.length;i++) {
+	    		krzyzowanie2Punkt.wylosujPunktyKrzyzowania();
+	    		if(Math.random() < crossingPropability) {
+	    			int partner = losujPartnera(wielkoscPopulacji,0);
+	    			char [] genyRodzicaX = population[i].dajLiniowo();
+	    			char [] genyRodzicaY = population[partner].dajLiniowo();
+	    			population[i].chromosome = Invidual.zamienNaGeny(krzyzowanie2Punkt.dajDziecko(genyRodzicaX, genyRodzicaY),genCount,MI);
+	    			population[partner].chromosome = Invidual.zamienNaGeny(krzyzowanie2Punkt.dajDziecko(genyRodzicaY, genyRodzicaX),genCount,MI);
+	    		}
+	    		
+	    	}
+	    	return population;
+	    }
+	    private Invidual[] krzyzuj8Punktowo(Invidual[] population) {
+	    	Invidual[] skrzyzowane = Invidual.copyPopulation(population, population.length);
+	    	Krzyzowanie8Punkt krzyzowanie8Punkt = new Krzyzowanie8Punkt(genCount*MI);
+	    	for(int i = 0; i < population.length;i++) {
+	    		
+	    		if(Math.random() < crossingPropability) {
+	    			int partner = losujPartnera(wielkoscPopulacji,0);
+	    			char [] genyRodzicaX = skrzyzowane[i].dajLiniowo();
+	    			char [] genyRodzicaY = skrzyzowane[partner].dajLiniowo();
+	    			skrzyzowane[i].chromosome = Invidual.zamienNaGeny(krzyzowanie8Punkt.dajDziecko(genyRodzicaX, genyRodzicaY),genCount,MI);
+	    		}
+	    	}
+	    	return skrzyzowane;
+	    }
+	    
+	    private Invidual[] mutujPopulacje(Invidual[] population) {
+	    	
+	    	Invidual[] zmutowana = Invidual.copyPopulation(population, population.length);
+	    	
+	    	char [] zmutowanyChromosom = new char[genCount*13];
+	    	Mutacja mutacja = new Mutacja(mutationPropability);
+	    	for(int i = 0; i < wielkoscPopulacji; i++) {
+	    		
+	    		//wybor czy dany gen ma zostac zmutowany
+	    		if(Math.random() < mutationPropability) {
+	    			zmutowanyChromosom =  mutacja.InvidualMutacja(zmutowana[i].dajLiniowo());
+	    			zmutowana[i].chromosome = Invidual.zamienNaGeny(zmutowanyChromosom, genCount, MI);
+	    		}
+	    	}
+	    	return zmutowana;
+	    }
+	    
+	    private static double sredniaWartoscPopulacji(double [] populationWartosci) {
+	    	double srednia = 0.0;
+	    	int wielkoscPopulacji = populationWartosci.length;
+	    	for(int i = 0; i < wielkoscPopulacji;i++) {
+	    		srednia+=populationWartosci[i];
+	    	}
+	    	return srednia / wielkoscPopulacji;
+	    }
+	    
+	    private static void zapiszGlobalnieNajlepszego( String pomiar) {
+	        Zapisywacz zapisywaczWszystkich = new Zapisywacz("globalnieNajlepsze.txt");
+	        zapisywaczWszystkich.WriteToFile(pomiar);
+	    }
+	    
+	    private static void zapiszNajlepszeLokalneRozwiazania(String pomiar, int population) {
+
+	        Zapisywacz zapisywaczNajlepszychLokalnie = new Zapisywacz("najlepszeLokalne" + population + "." + ".txt");
+	        zapisywaczNajlepszychLokalnie.WriteToFile(pomiar);
+	    }
+
+	    private static void zapiszRozwiazania(String pomiar, int population) {
+
+	        Zapisywacz zapisywaczNajlepszychLokalnie = new Zapisywacz("wszystkieRozwiazania" + population + "." + ".txt");
+	        zapisywaczNajlepszychLokalnie.WriteToFile(pomiar);
+	    }
+	    private static int losujPartnera(int max, int min) {
+			return (int)((Math.random() * (max - min)) + min);
+		}
+}
