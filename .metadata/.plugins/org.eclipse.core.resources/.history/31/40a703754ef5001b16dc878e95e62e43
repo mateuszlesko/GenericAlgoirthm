@@ -1,0 +1,55 @@
+package genericAlgorithm;
+
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class TournamentSelection {
+	Invidual [] players;
+	
+	public TournamentSelection(Invidual[] players) {
+		this.players = players;	
+	}
+	
+	public Invidual[] calyTournament() {
+		int wielkoscPopulacji = players.length;
+		Invidual [] zwyciezcy = new Invidual[wielkoscPopulacji];
+		
+		//zostawienie jednego pustego miejsca na wpisanie obecnie najlepszego aby nie zgubic tego rozwiazania
+		for(int i = 0; i < wielkoscPopulacji; i++) {
+			zwyciezcy[i] = organizeTinyTournament();
+		}
+		return zwyciezcy;
+	}
+	
+	private Invidual organizeTinyTournament() {
+		int bestDraw = getRandomNumber(0,players.length);
+		ArrayList<Integer> drawnPlayers = new ArrayList<Integer>();
+		ArrayList<Invidual> competitors = new ArrayList<Invidual>();
+		
+		Invidual najlepszy = players[bestDraw];
+	
+		while(drawnPlayers.size() < 3){
+			int indeks = getRandomNumber(0,players.length);
+			if(!drawnPlayers.contains(indeks) && indeks != bestDraw) {
+				drawnPlayers.add(indeks);
+				competitors.add(players[indeks]); // ogarnij kopie; bo referencje
+			}
+		
+		}
+		
+		
+		for(int i = 0; i < drawnPlayers.size();i++) {
+			if(najlepszy.functionValue > competitors.get(i).functionValue) {
+				najlepszy = competitors.get(i);
+			}
+		}
+		
+		
+		return najlepszy;
+		
+	}
+	
+	protected int getRandomNumber(int min, int max) {
+	    return (int)((Math.random() * (max - min)) + min);
+	}
+}

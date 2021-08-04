@@ -2,35 +2,35 @@ package genericAlgorithm;
 
 public class Mutation {
 	private double propability = 0.1;
-	Chromosome genome;
+	Invidual Invidual;
 	
-	public Mutation(Chromosome genome,double propability) {
+	public Mutation(Invidual Invidual,double propability) {
 		this.propability = propability; //prawdopodobienstwo
-		this.genome = genome;
+		this.Invidual = Invidual;
 	}
 	
 	public Mutation(double propability) {
 		this.propability = propability; //prawdopodobienstwo
 	}
 	
-	public Chromosome genomeMutation() {
-		for(int i = 0; i < genome.chromosome.length;i++) {
+	public Invidual InvidualMutation() {
+		char chromosome [] = Invidual.getLinear();
+		for(int i = 0; i < Invidual.chromosome.length;i++) {
 			double _propability = Math.random();
 			if(_propability < propability) {
-				genome.chromosome[i] = genome.chromosome[i] == '0' ? '1' : '0';
+				chromosome[i] = chromosome[i] == '0' ? '1' : '0';
 			}
 		}
-		return genome;
+		return Invidual;
 	}
 	
-	public Chromosome genomeMutation(Chromosome genome) {
-		for(int i = 0; i < genome.chromosome.length;i++) {
+	public char[] InvidualMutation(char [] chromosome) {
+		for(int i = 0; i < chromosome.length;i++) {
 			double _propability = Math.random();
 			if(_propability < propability) {
-				genome.chromosome[i] = genome.chromosome[i] == '0' ? '1' : '0';
+				chromosome[i] = chromosome[i] == '0' ? '1' : '0';
 			}
-		}
-		return genome;
+		}	
+		return chromosome;
 	}
-	
 }

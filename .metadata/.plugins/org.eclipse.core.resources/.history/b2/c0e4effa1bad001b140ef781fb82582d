@@ -1,5 +1,0 @@
-package genericAlgorithm;
-
-public interface GoalFunction {
-
-}

@@ -1,147 +1,204 @@
 package genericAlgorithm;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 public class GenericAlgorithm {
-	
-	public double Ai;
-	public double Bi;
-	private double mutationPropability;
-	private double crossingPropability;
-	private double env;
-	
-	private int n, populationLength;
-	private double precision;
-	private int times;
-	
-	private static boolean firstRun = true;
-	
-	public GenericAlgorithm(double _Ai, double _Bi,double _precision,int _n,int _populationLength,double _env,double _mutationPropability, double _crossingPropability, int _times) {
-		Ai = _Ai;
-		Bi = _Bi;
-		mutationPropability = _mutationPropability;
-		crossingPropability = _crossingPropability;
-		precision = _precision;
-		populationLength = _populationLength;
-		env = _env;
-		n = _n;
-		times = _times;
-		
-	}
-	
-	public void run(GoalFunction goal) throws CloneNotSupportedException{
-		
-		//1 krok inicjalizacja poczatkowej populacji chromosomow
-		//2 krok ocena przystosowania chromosomow w populacji
-		//3 krok: selekcja choromosomow: ruletka
-		//4 krok: zastpspwanie operatorow genetycznych
-		//	mutowanie
-		//	krzyzowanie
-		//5 krok: stworzenie nowej popualcji
-		
-		FileSaver globalMaxes = new FileSaver(String.format("globalMAX%d .txt",populationLength));
-		double AVGMAX [][] = new double[times][(int)(1000)];
-		double AVGS[][] = new double[times][(int)(1000)];
-		double AVG_GLOBALMAX[][] = new double[50][1000];
-		
-		for(int i = 0 ; i < times; i++) {
-			int generation  = 1;
-			Chromosome baseChromosome = new Chromosome(Ai,Bi,n,precision);
-			//krok 1 & 2
-			Population population = new Population(baseChromosome,populationLength);
-			population.adaptPopulation(goal);	
-			int j = 0;
-			
-			int adaptationNR = 0;
-			
-			while(adaptationNR < env) {
-				//krok 3
-				
-				if(firstRun == true && adaptationNR % 20 == 0) {
-					FileSaver adaptationSteps = new FileSaver(String.format("adaptationSteps%d .txt", populationLength));
-					adaptationSteps.WriteToFile(String.format("%d", adaptationNR));
-				}
-				
-				population = new DecisionRoulette(population,"MAX").newPopulation;
-				AVGMAX[i][j] = population.Adaptation.MAX;
-				AVGS[i][j] = population.Adaptation.AVG;
-				//krok 4 & 5
-				population = crossingChromosomes(population);
-				population = mutatePopulation(population);
-				
-				System.out.println("GENERACJA "+generation);
-				generation++;
-				population.Adaptation.showAdaptation();
-				j++;
-				adaptationNR++;	
-			}
-			firstRun = false;
-			globalMaxes.WriteToFile(String.format("%g",population.GLOBALMAX));
+
+	    public static double Ai = -4.5;
+	    public static double Bi = 4.5;
+	    static double precision = 1000;
+	    public int genCount = 2;
+	    public double mutationPropability = 0.04;
+	    public double crossingPropability = 0.6;
+	    
+	    public int populationLength;
+
+	    public int generation;
+
+	    public double localBestSolution;
+	    public int evaluationPointer = 0;
+	    
+	    Invidual[] population;
+	    
+	    Invidual najlepszy = null;
+
+	    int ewaulacje;
+	    
+	    int MI = 1;
+	    
+	    public GenericAlgorithm(int _n, int _populationLength, double _MutationPropability, double _krzyzowaniePropability) {
+	        mutationPropability = _MutationPropability;
+	        crossingPropability = _krzyzowaniePropability;
+	        populationLength = _populationLength;
+	        genCount = _n;
+	        //step 1: creating primary population
+	        population = stworzPopulacje();
+	        MI = Invidual.Mi(Ai, Bi, precision);
+	    }
+
+	    
+	    private Invidual[] stworzPopulacje(){
+	    	
+	    	Invidual [] _population = new Invidual[populationLength];
+	    	for(int i = 0; i < populationLength; i++) {
+	    		_population[i] = new Invidual(Ai,Bi,genCount,precision);
+	    		
+	    	}
+	    	return _population;
+	    }
+	    
+	    
+	    private Invidual znajdzNajlepszegoObecnie(Invidual [] population) {
+	   
+	    	Invidual najlepszy = population[0];
+	    	for(int i = 1; i < populationLength; i++) {
+	    		if(najlepszy.compareTo(population[i]) == 1) {
+	    			najlepszy = population[i];
+	    		}
+	    	}
+	    	return najlepszy;
+	    }
+	    
+	    private void zmienPopulacje(Invidual[] nowa) {
+	    	for(int i = 1; i < populationLength; i++) {
+	    		population[i] = nowa[i];
+	    	}
+	    }
+	    
+	    public Invidual[] run(double env) {
+	        evaluationPointer = 1;
+	        String probe = "";
+	        
+	        while (evaluationPointer <= env) {
+	        	double wartosciFunkcji [] = new double[populationLength];
+	        	
+	        	//step 2: calculating population values
+	        	for(int i = 0; i < populationLength; i++) {
+	        		population[i].functionValue = population[i].calculateFunctionValue();
+	        		wartosciFunkcji[i] = population[i].functionValue;
+	        		evaluationPointer++;
+	        	}
+	        	probe = (evaluationPointer)+";"+PopulationAVGValue(wartosciFunkcji);
+	        	probe = probe.replace('.',',');
+	    		saveSolutions(probe,populationLength);
+	    	
+	        	
+	        	// step 3: selecting the best solutions to auxiliary population
+	        	TournamentSelection TournamentSelection = new TournamentSelection(population);
+	        	najlepszy = znajdzNajlepszegoObecnie(population);
+	        	localBestSolution = najlepszy.functionValue;
+	        	
+	        	population = TournamentSelection.organizeFullTournament();
+	        	population[0] = najlepszy;
+	        	
+	        	// step 4: mutating an auxiliary population; going into another space
+	        	population = mutatePopulation(population);      	
+	        	
+	        	for(int i = 0; i < populationLength; i++) {
+	        		population[i].functionValue = population[i].calculateFunctionValue();
+	        	}
+	        	
+	        	// step 5: crossing an mutated auxiliary population; searching entered space
+	        	if(genCount <= 20) {
+	        		population = cross2Points(population);
+	        	}
+	        	else {
+	        		population = cross8Points(population);
+	        	}
+	        	
+	        	for(int i = 0; i < populationLength; i++) {
+	        		population[i].functionValue = population[i].calculateFunctionValue();
+	        	}
+	        	
+	        	//geting probes of searching results
+	        	probe = (evaluationPointer)+";"+localBestSolution;
+	          	probe = probe.replace('.',',');
+	          	saveBestLocalSolution(probe, populationLength);
+	          	
+	          	if(localBestSolution <= Main.globalBest) {
+	          		Main.globalBest = localBestSolution;
+	          	}
+	          	
+	          	probe = evaluationPointer+";" + Main.globalBest;
+	          	probe = probe.replace(".",",");
+	        	saveBestGlobalSolution(probe);
+	          	
+	        }
+	      
+	        return population;
+	    }
+	    
+	    private Invidual[] cross2Points(Invidual[] population) {
+	    	TwoPointCrossing TwoPointCrossing = new TwoPointCrossing(genCount*MI);
+	    	for(int i = 0; i < population.length;i++) {
+	    		TwoPointCrossing.drawCrossingPoints();
+	    		if(Math.random() < crossingPropability) {
+	    			int partner = drawCrossingPartner(populationLength,0);
+	    			char [] parentGenesX = population[i].getLinear();
+	    			char [] parentGenesY = population[partner].getLinear();
+	    			population[i].chromosome = Invidual.changeToGens(TwoPointCrossing.getChild(parentGenesX, parentGenesY),genCount,MI);
+	    			population[partner].chromosome = Invidual.changeToGens(TwoPointCrossing.getChild(parentGenesY, parentGenesX),genCount,MI);
+	    		}
+	    		
+	    	}
+	    	return population;
+	    }
+	    private Invidual[] cross8Points(Invidual[] population) {
+	    	Invidual[] crossedInviduals = Invidual.copyPopulation(population, population.length);
+	    	EightPointCrossing EightPointCrossing = new EightPointCrossing(genCount*MI);
+	    	for(int i = 0; i < population.length;i++) {
+	    		
+	    		if(Math.random() < crossingPropability) {
+	    			int partner = drawCrossingPartner(populationLength,0);
+	    			char [] parentGenesX = crossedInviduals[i].getLinear();
+	    			char [] parentGenesY = crossedInviduals[partner].getLinear();
+	    			crossedInviduals[i].chromosome = Invidual.changeToGens(EightPointCrossing.getChild(parentGenesX, parentGenesY),genCount,MI);
+	    		}
+	    	}
+	    	return crossedInviduals;
+	    }
+	    
+	    private Invidual[] mutatePopulation(Invidual[] population) {
+	    	
+	    	Invidual[] mutatedInviduals = Invidual.copyPopulation(population, population.length);
+	    	
+	    	char [] mutatedChromosome = new char[genCount*13];
+	    	Mutation Mutation = new Mutation(mutationPropability);
+	    	for(int i = 0; i < populationLength; i++) {
+	    		
+	    		//choosing if gen will be mutated
+	    		if(Math.random() < mutationPropability) {
+	    			mutatedChromosome =  Mutation.InvidualMutation(mutatedInviduals[i].getLinear());
+	    			mutatedInviduals[i].chromosome = Invidual.changeToGens(mutatedChromosome, genCount, MI);
+	    		}
+	    	}
+	    	return mutatedInviduals;
+	    }
+	    
+	    private static double PopulationAVGValue(double [] populationValues) {
+	    	double AVG = 0.0;
+	    	int populationLength = populationValues.length;
+	    	for(int i = 0; i < populationLength;i++) {
+	    		AVG+=populationValues[i];
+	    	}
+	    	return AVG / populationLength;
+	    }
+	    
+	    private static void saveBestGlobalSolution( String probe) {
+	        FileSaver FileSaverWszystkich = new FileSaver("globalBests.txt");
+	        FileSaverWszystkich.WriteToFile(probe);
+	    }
+	    
+	    private static void saveBestLocalSolution(String probe, int population) {
+
+	        FileSaver FileSaverNajlepszychLokalnie = new FileSaver("localBests" + population + "." + ".txt");
+	        FileSaverNajlepszychLokalnie.WriteToFile(probe);
+	    }
+
+	    private static void saveSolutions(String probe, int population) {
+
+	        FileSaver FileSaverNajlepszychLokalnie = new FileSaver("all" + population + "." + ".txt");
+	        FileSaverNajlepszychLokalnie.WriteToFile(probe);
+	    }
+	    private static int drawCrossingPartner(int max, int min) {
+			return (int)((Math.random() * (max - min)) + min);
 		}
-		
-		FileSaver localMax = new FileSaver(String.format("localMax%d .txt",populationLength));
-		FileSaver localAVG = new FileSaver(String.format("localAVG%d .txt",populationLength));
-		double localMaxes[] =  calculateAVGLocal(AVGMAX);
-		double localAVGS[] = calculateAVGLocal(AVGS);
-		double globalMaxesArr[] = calculateAVGLocal(AVG_GLOBALMAX);
-		
-		for(int i = 0; i < localMaxes.length;i++) {
-			localMax.WriteToFile(String.format("%g", localMaxes[i]));
-			localAVG.WriteToFile(String.format("%g", localAVGS[i]));
-			globalMaxes.WriteToFile(String.format("%g",globalMaxesArr[i]));
-		}
-	}
-	
-	
-	private Population mutatePopulation(Population population) {
-		
-		Mutation mutation = new Mutation(mutationPropability);
-		int length = population.population.length;
-		for(int i = 0; i < length;i++) {
-			
-			if(Math.random() < mutationPropability) {
-				population.population[i] = mutation.genomeMutation(population.population[i]);
-			}
-		}
-		
-		return population;
-	}
-	
-	private Population crossingChromosomes(Population crossingPopulation) throws CloneNotSupportedException {
-		
-		int randomChromosome;
-		int chromosomeLength = crossingPopulation.population[0].getChromosomeLength();
-		int length = crossingPopulation.population.length;
-		double randomPropability = 0.0;
-		
-		Chromosome parentX,parentY;
-		for(int i = 0;i<length;i++) {
-			randomPropability = Math.random();
-			if(randomPropability<=crossingPropability) {
-				randomChromosome = (int)(Math.random()*length);
-				Intersection2P intersection2P = new Intersection2P(chromosomeLength);
-				parentX = (Chromosome) crossingPopulation.population[i].clone();
-				parentY = (Chromosome) crossingPopulation.population[randomChromosome].clone();
-				crossingPopulation.population[i] = intersection2P.getChild(parentX, parentY);
-				crossingPopulation.population[randomChromosome] = intersection2P.getChild(parentY, parentX);
-			}
-		}
-		
-		return crossingPopulation;
-	}
-	
-	
-	private double[] calculateAVGLocal(double[][]arr) {
-		double AVGLocalMAX [] = new double[times];
-		for(int i = 0; i < times;i++) {
-			AVGLocalMAX[i] = calculateAVG(arr[i]);
-		}
-		return AVGLocalMAX;
-	}
-	
-	private double calculateAVG(double[] arr) {
-		return Arrays.stream(arr).average().getAsDouble();
-	}
-	
-	
 }
